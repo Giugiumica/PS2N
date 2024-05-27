@@ -1,59 +1,81 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control LED & Temperatură</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1 {
-            text-align: center;
-        }
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 200px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin: 0 10px;
-            cursor: pointer;
-        }
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Arduino Temperature and LED Control</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <h1>Control LED & Temperatură</h1>
     <div class="container">
-        <form id="control-form">
-            <button type="button" onclick="sendCommand('A')">Aprinde LED</button>
-            <button type="button" onclick="sendCommand('S')">Stinge LED</button>
+        <h1 class="mt-5">Current Temperature</h1>
+        <p class="lead" id="temperature">{{ temperature }} &deg;C</p>
+        <h1 class="mt-5">LED Status</h1>
+        <p class="lead" id="led_status">{{ led_status }}</p>
+        <button class="btn btn-primary" id="led-on-btn">Turn LED On</button>
+        <button class="btn btn-danger" id="led-off-btn">Turn LED Off</button>
+        <h1 class="mt-5" id="flood_alert" style="color: red; display: none;">Flood detected!</h1>
+        
+        <!-- Formular pentru trimiterea unui mesaj -->
+        <form id="message-form">
+            <div class="form-group">
+                <label for="message">Message:</label>
+                <input type="text" class="form-control" id="message" name="message">
+            </div>
+            <button type="submit" class="btn btn-primary">Send Message</button>
         </form>
     </div>
 
     <script>
-        function sendCommand(command) {
-            fetch('/control', {
-                method: 'POST',
-                body: new URLSearchParams({ 'command': command }),
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                console.log('Command sent successfully');
-            })
-            .catch(error => {
-                console.error('There was a problem with the fetch operation:', error);
+        $(document).ready(function() {
+            function updateStatus() {
+                $.get("/get_status", function(data) {
+                    $('#temperature').html(data.temperature + ' &deg;C');
+                    $('#led_status').html(data.led_status);
+                });
+            }
+
+            function checkFlood() {
+                $.get("/check_flood", function(data) {
+                    if (data.flood_detected) {
+                        $('#flood_alert').show();
+                    } else {
+                        $('#flood_alert').hide();
+                    }
+                });
+            }
+
+            $('#led-on-btn').click(function() {
+                $.post("/toggle_led", { action: "on" }, function(response) {
+                    if (response.success) {
+                        updateStatus();
+                    }
+                });
             });
-        }
+
+            $('#led-off-btn').click(function() {
+                $.post("/toggle_led", { action: "off" }, function(response) {
+                    if (response.success) {
+                        updateStatus();
+                    }
+                });
+            });
+
+            // Update the status every second
+            setInterval(updateStatus, 1000);
+            setInterval(checkFlood, 1000); // Check flood status every second
+
+            // Trimite mesajul când formularul este trimis
+            $('#message-form').submit(function(event) {
+                event.preventDefault(); // Previne trimiterea formularului
+                var message = $('#message').val(); // Preia mesajul din input
+                $.post("/send_message", { message: message }, function(response) {
+                    if (response.success) {
+                        alert("Message sent successfully!");
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>
