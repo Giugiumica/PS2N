@@ -1,8 +1,3 @@
-python-dotenv
-langchain
-openai
-slack-sdk 
-slack-bolt 
-Flask
-gunicorn
-urllib3<2
+pyserial
+requests
+flask
